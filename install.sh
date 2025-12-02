@@ -99,27 +99,88 @@ print_success "pip upgraded successfully"
 
 echo ""
 
-# Step 4: Check venv module availability
+# Step 4: Check venv module availability and functionality
 echo "Step 4: Checking virtual environment module..."
 VENV_CMD=""
+VENV_AVAILABLE=false
+
+# First check if venv module exists
 if $PYTHON_CMD -m venv --help &> /dev/null; then
-    print_success "venv module is available"
-    VENV_CMD="$PYTHON_CMD -m venv"
-else
-    print_warning "venv module is not available in Python installation"
-    
-    # Try alternative: virtualenv
-    if command -v virtualenv &> /dev/null; then
-        print_warning "Using virtualenv as alternative..."
-        VENV_CMD="virtualenv"
-    elif $PYTHON_CMD -m virtualenv --help &> /dev/null 2>&1; then
-        print_warning "Using virtualenv module as alternative..."
-        VENV_CMD="$PYTHON_CMD -m virtualenv"
+    # Test if venv can actually create a virtual environment
+    TEST_VENV_DIR=$(mktemp -d)
+    if $PYTHON_CMD -m venv "$TEST_VENV_DIR" &> /dev/null 2>&1; then
+        rm -rf "$TEST_VENV_DIR"
+        VENV_AVAILABLE=true
+        VENV_CMD="$PYTHON_CMD -m venv"
+        print_success "venv module is available and functional"
     else
-        print_error "Neither venv nor virtualenv is available."
+        rm -rf "$TEST_VENV_DIR" 2>/dev/null || true
+        print_warning "venv module exists but ensurepip is not available"
+        
+        # Try to install python3-venv if on Debian/Ubuntu
+        if command -v apt-get &> /dev/null; then
+            PYTHON_VERSION_SHORT=$($PYTHON_CMD --version 2>&1 | awk '{print $2}' | cut -d. -f1,2)
+            print_info "Attempting to install python${PYTHON_VERSION_SHORT}-venv..."
+            
+            # Check if running as root or can use sudo
+            if [ "$EUID" -eq 0 ]; then
+                apt-get update -qq && apt-get install -y -qq "python${PYTHON_VERSION_SHORT}-venv" 2>/dev/null
+                if [ $? -eq 0 ]; then
+                    print_success "python${PYTHON_VERSION_SHORT}-venv installed successfully"
+                    # Test again
+                    TEST_VENV_DIR2=$(mktemp -d)
+                    if $PYTHON_CMD -m venv "$TEST_VENV_DIR2" &> /dev/null 2>&1; then
+                        rm -rf "$TEST_VENV_DIR2"
+                        VENV_AVAILABLE=true
+                        VENV_CMD="$PYTHON_CMD -m venv"
+                        print_success "venv is now functional"
+                    else
+                        rm -rf "$TEST_VENV_DIR2" 2>/dev/null || true
+                    fi
+                else
+                    print_error "Failed to install python${PYTHON_VERSION_SHORT}-venv"
+                fi
+            else
+                print_info "Please run: sudo apt-get install python${PYTHON_VERSION_SHORT}-venv"
+            fi
+        fi
+    fi
+fi
+
+# If venv still not available, try virtualenv
+if [ "$VENV_AVAILABLE" = false ]; then
+    print_warning "Trying virtualenv as alternative..."
+    
+    if command -v virtualenv &> /dev/null; then
+        VENV_CMD="virtualenv"
+        VENV_AVAILABLE=true
+        print_success "Found virtualenv command"
+    elif $PYTHON_CMD -m virtualenv --help &> /dev/null 2>&1; then
+        VENV_CMD="$PYTHON_CMD -m virtualenv"
+        VENV_AVAILABLE=true
+        print_success "Found virtualenv module"
+    else
+        # Try installing virtualenv
+        print_info "Attempting to install virtualenv..."
+        if $PIP_CMD install --quiet virtualenv 2>/dev/null; then
+            if command -v virtualenv &> /dev/null; then
+                VENV_CMD="virtualenv"
+                VENV_AVAILABLE=true
+                print_success "virtualenv installed successfully"
+            elif $PYTHON_CMD -m virtualenv --help &> /dev/null 2>&1; then
+                VENV_CMD="$PYTHON_CMD -m virtualenv"
+                VENV_AVAILABLE=true
+                print_success "virtualenv module installed successfully"
+            fi
+        fi
+    fi
+    
+    if [ "$VENV_AVAILABLE" = false ]; then
+        print_error "Cannot create virtual environment. Neither venv nor virtualenv is working."
         print_info "Installation instructions:"
         if command -v apt-get &> /dev/null; then
-            print_info "  sudo apt-get install python3-venv"
+            PYTHON_VERSION_SHORT=$($PYTHON_CMD --version 2>&1 | awk '{print $2}' | cut -d. -f1,2)
+            print_info "  sudo apt-get install python${PYTHON_VERSION_SHORT}-venv"
         elif command -v yum &> /dev/null; then
             print_info "  sudo yum install python3-venv"
         elif command -v brew &> /dev/null; then
@@ -149,8 +210,53 @@ if [ -d "venv" ]; then
 fi
 
 if [ ! -d "venv" ]; then
-    $VENV_CMD venv
-    print_success "Virtual environment created successfully"
+    print_info "Creating virtual environment..."
+    VENV_OUTPUT=$($VENV_CMD venv 2>&1)
+    VENV_EXIT_CODE=$?
+    
+    if [ $VENV_EXIT_CODE -eq 0 ] && [ -d "venv" ] && [ -f "venv/bin/activate" ]; then
+        print_success "Virtual environment created successfully"
+    else
+        print_error "Failed to create virtual environment"
+        if [ -n "$VENV_OUTPUT" ]; then
+            echo "$VENV_OUTPUT" | head -5
+        fi
+        
+        # Provide specific instructions based on error
+        if echo "$VENV_OUTPUT" | grep -qi "ensurepip"; then
+            PYTHON_VERSION_SHORT=$($PYTHON_CMD --version 2>&1 | awk '{print $2}' | cut -d. -f1,2)
+            print_error "ensurepip is not available. This is required for venv."
+            if command -v apt-get &> /dev/null; then
+                if [ "$EUID" -eq 0 ]; then
+                    print_info "Installing python${PYTHON_VERSION_SHORT}-venv..."
+                    apt-get update -qq && apt-get install -y -qq "python${PYTHON_VERSION_SHORT}-venv" 2>&1 | grep -v "^$"
+                    if [ $? -eq 0 ]; then
+                        print_success "python${PYTHON_VERSION_SHORT}-venv installed. Retrying venv creation..."
+                        if $VENV_CMD venv 2>/dev/null && [ -d "venv" ] && [ -f "venv/bin/activate" ]; then
+                            print_success "Virtual environment created successfully"
+                        else
+                            print_error "Still failed after installing python${PYTHON_VERSION_SHORT}-venv"
+                            exit 1
+                        fi
+                    else
+                        print_error "Failed to install python${PYTHON_VERSION_SHORT}-venv"
+                        print_info "Please run manually: sudo apt-get install python${PYTHON_VERSION_SHORT}-venv"
+                        exit 1
+                    fi
+                else
+                    print_info "Please run: sudo apt-get install python${PYTHON_VERSION_SHORT}-venv"
+                    print_info "Then run this script again."
+                    exit 1
+                fi
+            else
+                print_info "Please install python3-venv package for your system"
+                exit 1
+            fi
+        else
+            print_info "Please check the error message above and install required packages."
+            exit 1
+        fi
+    fi
 fi
 
 echo ""
