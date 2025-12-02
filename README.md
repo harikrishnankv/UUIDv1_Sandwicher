@@ -144,8 +144,9 @@ rm -rf venv
 
 ## 🔗 Related Resources
 
-- **Vulnerable Lab**: Practice UUID enumeration attacks with our [File Storage Lab](https://github.com/harikrishnankv/file-storage-lab)
-- **UUID Specification**: RFC 4122 - UUID specification
+- **Vulnerable Lab**: 
+   Practice UUID enumeration attacks with our [File Storage Lab](https://github.com/harikrishnankv/file-storage-lab)
+- **Article**: [Sandwich Attack UUID v1](https://medium.com/@ibm_ptc_security/a114e3a8b6c4)
 
 
 
@@ -156,8 +157,11 @@ rm -rf venv
 - **Harikrishanan Kv** - [LinkedIn](https://www.linkedin.com/in/harikrishnan-kv-85738914a/)
 
 ---
+## 👥 Thanks and Inspiration
+-**Lupin**- [X](https://x.com/0xLupin)
 
 
 ## ⚠️ Disclaimer
 
 This tool is intended for educational and authorized security testing purposes only. Users are responsible for ensuring they have proper authorization before testing UUID vulnerabilities on any system.
+
