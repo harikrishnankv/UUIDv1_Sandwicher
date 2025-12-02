@@ -398,7 +398,7 @@ class UUIDv1Generator:
             'sandwich_attack_description': 'UUID v1 timestamps are predictable and can be manipulated to create collisions or predict future UUIDs',
             'sandwich_attack_risk': 'Attackers can generate UUIDs with timestamps before and after a target UUID, potentially causing database conflicts',
             'sandwich_attack_exploitation': 'Use UUID SANDWICHER tool to generate payloads for testing and exploitation',
-            'sandwich_attack_article_url': 'https://medium.com/@securityresearcher/uuid-sandwich-attacks-time-based-vulnerabilities-in-distributed-systems-1234567890ab',
+            'sandwich_attack_article_url': 'https://medium.com/@ibm_ptc_security/sandwich-attack-uuid-v1-a114e3a8b6c4',
             'sandwich_attack_article_title': 'UUID Sandwich Attacks: Time-Based Vulnerabilities in Distributed Systems',
             'sandwich_attack_lab_url': 'https://github.com/harikrishnankv/file-storage-lab',
             'sandwich_attack_lab_title': 'File Storage Lab - UUID v1 Vulnerability Challenge'
