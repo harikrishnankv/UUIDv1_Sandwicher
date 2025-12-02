@@ -158,10 +158,11 @@ rm -rf venv
 
 ---
 ## 👥 Thanks and Inspiration
--**Lupin**- [X](https://x.com/0xLupin)
+- **Lupin**- [X](https://x.com/0xLupin)
 
 
 ## ⚠️ Disclaimer
 
 This tool is intended for educational and authorized security testing purposes only. Users are responsible for ensuring they have proper authorization before testing UUID vulnerabilities on any system.
+
 
