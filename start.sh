@@ -40,30 +40,40 @@ echo ""
 
 # Step 1: Check if virtual environment exists
 echo "Step 1: Checking virtual environment..."
-if [ ! -d "venv" ]; then
-    print_error "Virtual environment not found!"
-    echo ""
-    read -p "Do you want to run the installation script now? (y/n): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        if [ ! -f "install.sh" ]; then
-            print_error "install.sh not found!"
-            exit 1
-        fi
-        chmod +x install.sh
-        ./install.sh
+if [ ! -d "venv" ] || [ ! -f "venv/bin/activate" ]; then
+    if [ ! -d "venv" ]; then
+        print_warning "Virtual environment not found!"
     else
-        print_error "Please run './install.sh' first to set up the virtual environment."
+        print_warning "Virtual environment appears to be corrupted!"
+    fi
+    
+    echo ""
+    print_info "Virtual environment is required. Creating it now..."
+    
+    # Check if install.sh exists
+    if [ ! -f "install.sh" ]; then
+        print_error "install.sh not found! Cannot create virtual environment."
+        print_error "Please ensure install.sh is present in the project directory."
         exit 1
     fi
+    
+    # Make install.sh executable
+    chmod +x install.sh
+    
+    # Automatically run install.sh
+    print_info "Running installation script..."
+    ./install.sh
+    
+    # Verify venv was created successfully
+    if [ ! -d "venv" ] || [ ! -f "venv/bin/activate" ]; then
+        print_error "Installation failed. Virtual environment was not created."
+        exit 1
+    fi
+    
+    print_success "Virtual environment created and ready"
+else
+    print_success "Virtual environment found"
 fi
-
-if [ ! -f "venv/bin/activate" ]; then
-    print_error "Virtual environment is corrupted. Please run './install.sh' again."
-    exit 1
-fi
-
-print_success "Virtual environment found"
 
 echo ""
 
